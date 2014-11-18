@@ -164,26 +164,26 @@ window.CourseData = (function () {
             "objectType": "Activity"
         },
         peeps = [
-            {"name":"bob", "mbox":"mailto:bob@example.com"},
-            {"name":"mary", "mbox":"mailto:mary@example.com"},
-            {"name":"vince", "mbox":"mailto:vince@example.com"},
-            {"name":"alice", "mbox":"mailto:alice@example.com"},
-            {"name":"nick", "mbox":"mailto:nick@example.com"},
-            {"name":"hershel", "mbox":"mailto:hershel@example.com"},
-            {"name":"roy", "mbox":"mailto:roy@example.com"},
-            {"name":"alex", "mbox":"mailto:alex@example.com"},
-            {"name":"camille", "mbox":"mailto:camile@example.com"},
-            {"name":"sasha", "mbox":"mailto:sasha@example.com"},
-            {"name":"chad", "mbox":"mailto:chad@example.com"},
-            {"name":"thomas", "mbox":"mailto:thomas@example.com"},
-            {"name":"michael", "mbox":"mailto:michael@example.com"},
-            {"name":"violet", "mbox":"mailto:violet@example.com"},
-            {"name":"owen", "mbox":"mailto:owen@example.com"},
-            {"name":"george", "mbox":"mailto:george@example.com"},
-            {"name":"persephone", "mbox":"mailto:persephone@example.com"},
-            {"name":"jill", "mbox":"mailto:jill@example.com"},
-            {"name":"will", "mbox":"mailto:will@example.com"},
-            {"name":"luke", "mbox":"mailto:luke@example.com"}
+            {"name":"bob", "account":{"homePage":"http://cloud.scorm.com","name":"bob@example.com"}},
+            {"name":"mary", "account":{"homePage":"http://cloud.scorm.com","name":"mary@example.com"}},
+            {"name":"vince", "account":{"homePage":"http://cloud.scorm.com","name":"vince@example.com"}},
+            {"name":"alice", "account":{"homePage":"http://cloud.scorm.com","name":"alice@example.com"}},
+            {"name":"nick", "account":{"homePage":"http://cloud.scorm.com","name":"nick@example.com"}},
+            {"name":"hershel", "account":{"homePage":"http://cloud.scorm.com","name":"hershel@example.com"}},
+            {"name":"roy", "account":{"homePage":"http://cloud.scorm.com","name":"roy@example.com"}},
+            {"name":"alex", "account":{"homePage":"http://cloud.scorm.com","name":"alex@example.com"}},
+            {"name":"camille", "account":{"homePage":"http://cloud.scorm.com","name":"camile@example.com"}},
+            {"name":"sasha", "account":{"homePage":"http://cloud.scorm.com","name":"sasha@example.com"}},
+            {"name":"chad", "account":{"homePage":"http://cloud.scorm.com","name":"chad@example.com"}},
+            {"name":"thomas", "account":{"homePage":"http://cloud.scorm.com","name":"thomas@example.com"}},
+            {"name":"michael", "account":{"homePage":"http://cloud.scorm.com","name":"michael@example.com"}},
+            {"name":"violet", "account":{"homePage":"http://cloud.scorm.com","name":"violet@example.com"}},
+            {"name":"owen", "account":{"homePage":"http://cloud.scorm.com","name":"owen@example.com"}},
+            {"name":"george", "account":{"homePage":"http://cloud.scorm.com","name":"george@example.com"}},
+            {"name":"persephone", "account":{"homePage":"http://cloud.scorm.com","name":"persephone@example.com"}},
+            {"name":"jill", "account":{"homePage":"http://cloud.scorm.com","name":"jill@example.com"}},
+            {"name":"will", "account":{"homePage":"http://cloud.scorm.com","name":"will@example.com"}},
+            {"name":"luke", "account":{"homePage":"http://cloud.scorm.com","name":"luke@example.com"}}
         ],
         tmpl = {
             "id": "",
@@ -294,7 +294,7 @@ window.CourseData = (function () {
     }
     
     function createInitialzed (peep, attguid, starttime, obj) {
-        activity.setattempt(peep.mbox, obj.id, obj.id + "?attemptId=" + attguid);
+        activity.setattempt(peep.account.name, obj.id, obj.id + "?attemptId=" + attguid);
         return createStmt(peep, attguid, starttime, obj, ADL.verbs.initialized);
     }
     

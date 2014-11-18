@@ -98,7 +98,7 @@
          *****/
         
         function graphUserDetails() {
-            var data = convertCollToData(new ADL.Collection(CourseData.statements).where('verb.id !="'+ADL.verbs.responded.id+'"').groupBy('actor.mbox'));
+            var data = convertCollToData(new ADL.Collection(CourseData.statements).where('verb.id !="'+ADL.verbs.responded.id+'"').groupBy('actor.account.name'));
             nv.addGraph(function() {
                 var chart = nv.models.indentedTree()
                     .tableClass('table table-striped') //for bootstrap styling
@@ -167,7 +167,7 @@
         
         var actorBar = attdash.createBarChart({
                 container: "#actorbar svg",
-                groupBy: "actor.mbox",
+                groupBy: "actor.account.name",
                 process: function (data, event, opts) {
                     d3.select('#actorbar h4').text("'" + /[^\/]+$/.exec(event.in)[0] + "' Attempts by Actor");
                     var d = mapProfileData(window.CourseData.activityprofiles.profiles);
@@ -179,8 +179,8 @@
                     c.xAxis.rotateLabels(45);
                     c.xAxis.tickFormat(function(d,e,f){
                         var coll = new ADL.Collection(CourseData.statements);
-                        var contents = coll.where('actor.mbox = "'+ d +'"').contents;
-                        return contents[0].actor.name;
+                        var contents = coll.where('actor.account.name = "'+ d +'"').contents;
+                        return contents[0].actor.name || d;
                     });
                 }
             });
@@ -189,9 +189,9 @@
             // maybe a new dashboard here
             // what about course activity attempts + job aid attempts
             var coll = new ADL.Collection(CourseData.statements),
-                contents = coll.where('actor.mbox = "'+ mbox +'"').contents,
+                contents = coll.where('actor.account.name = "'+ mbox +'"').contents,
                 actorname = contents[0].actor.name;
-            contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(JAData).where('actor.mbox = "'+ mbox +'"').contents)));
+            contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(JAData).where('actor.mbox = "mailto:'+ mbox +'"').contents)));
 
             nv.addGraph(function() {
                 var chart = nv.models.multiBarChart()
@@ -396,7 +396,6 @@
                           "http://adlnet.gov/jobaid/roses/symbolism"],
                 course = {key: "course", values: []},
                 jobaid = {key: "jobaid", values: []},
-//                ret = [],
                 activities = new ADL.Collection(stmts).groupBy('object.id').contents
                     .reduce(function(prev, cur, idx, arr){
                         prev[cur.group] = cur.data;
@@ -407,21 +406,11 @@
                 var actid = actset[idx],
                     cid = actid.replace("/jobaid/","/courses/"),
                     key = /[^\/]+$/.exec(actid)[0];
-//                ret.push(
-//                    {
-//                        key: /[^\/]+$/.exec(actid)[0],
-//                        values: [
-//                            {x: "course", y: (activities[cid])?activities[cid].length:0},
-//                            {x: "job aid", y: (activities[actid])?activities[actid].length:0}
-//                        ]
-//                    }
-//                );
                 course.values.push({x: key, y: (activities[cid])?activities[cid].length:0});
                 jobaid.values.push({x: key, y: (activities[actid])?activities[actid].length:0});
             }
             
             return [course,jobaid];
-//            return ret;
         }
         
         function getLearnerFinalScore(node) {
