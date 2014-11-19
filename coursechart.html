@@ -375,7 +375,14 @@
                                     // attempt level
                                     "key": node.context.contextActivities.grouping[0].id,
                                     "score": getAttemptScore(node),
-                                    "attempts": new Date(node.timestamp).toLocaleString()
+                                    "attempts": new Date(node.timestamp).toLocaleString(),
+                                    "_values": getInteractionsArray(node).map(function(node){
+                                        return {
+                                            "key":node.object.definition.description['en-US'] || node.object.id, // i want object.definition.description
+                                            "score":node.result.response, //i want result.response
+                                            "attempts": new Date(node.timestamp).toLocaleString()
+                                        };
+                                    })
                                 };
                             })
                         };
@@ -385,6 +392,18 @@
             return [{"key":"Roses Course", "values": data}];
         }
         
+        function getInteractionsArray(node) {
+            var ret = new ADL.Collection(CourseData.statements)
+                            .where("verb.id = '" + ADL.verbs.responded.id + "'")
+                            .contents.reduce(function(prev, cur, idx, arr){
+                                if (arr[idx].context.contextActivities.grouping[0].id == 
+                                    node.context.contextActivities.grouping[0].id)
+                                    prev.push(arr[idx]);
+                                return prev;
+                            }, []);
+//            var x = node;
+            return ret;
+        }
 
         function getCourseToJobaidAttempts(stmts) {
             var actset = ["http://adlnet.gov/jobaid/roses/what",

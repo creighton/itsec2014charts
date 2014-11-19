@@ -268,11 +268,11 @@ window.CourseData = (function () {
     
     function createInteractions(peep, attguid, starttime, question, score, totalright) {
         var itrs = JSON.parse(JSON.stringify(interactions)),
-            cpyitrs = JSON.parse(JSON.stringify(interactions));
+            idxarr = [0,1,2,3];
         for (var i = 0; i < totalright; i++) {
-            var loc = getRandomInt(0, cpyitrs.length);
-            itrs[loc]["passed"] = true;
-            cpyitrs.splice(loc, 1);
+            var loc = getRandomInt(0, idxarr.length);
+            itrs[idxarr[loc]]["passed"] = true;
+            idxarr.splice(loc, 1);
         }
         
         var ts = new Date(+starttime + 1000 * getRandomInt(0, 900))
