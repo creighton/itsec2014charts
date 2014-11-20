@@ -41,6 +41,16 @@
 </head>
 <body>
     <h1>Android Job Aid Metrics</h1>
+<!--
+    <div class="btn-group pull-right" data-toggle="buttons">
+      <label class="btn btn-primary active">
+        <input type="radio" name="options" id="canned" autocomplete="off" checked> Pre Canned Data
+      </label>
+      <label class="btn btn-primary">
+        <input type="radio" name="options" id="live" autocomplete="off"> LRS Data
+      </label>
+    </div>
+-->
     <h4>Total # of times subject was accessed</h4>
     <div id="activities">
         <svg></svg>
@@ -65,13 +75,35 @@
         window.onload = function () {
             // only get statements with "id": "http://adlnet.gov/jobaid/roses"
             // and ADL.verbs.experienced
+//            $('#canned').on('click', function () {
+//                console.log("canned");
+//                drawCharts(false);
+//            })
+//            $('#live').on('click', function () {
+//                console.log("canned");
+//                drawCharts(true);
+//            })
             
-            
+            drawCharts(false);
 //            dash.fetchAllStatements({}, fetchDoneCallback);
-            dash.addStatements(window.JAData);
-            graphActivityActivity();
-            graphActorActivityFrequency();
+//            dash.addStatements(window.JAData);
+//            graphActivityActivity();
+//            graphActorActivityFrequency();
         };
+        
+        function drawCharts(live) {
+            d3.select('svg').empty();
+            if (live) {
+                dash.fetchAllStatements({'activity':'http://adlnet.gov/jobaid/roses','verb':ADL.verbs.experienced.id,'related_activities':'true'},
+                                       function() {graphActivityActivity(); graphActorActivityFrequency();});
+            }
+            else {
+                dash.addStatements(window.JAData);
+                graphActivityActivity();
+                graphActorActivityFrequency();
+            }
+            
+        }
         
         function graphActivityActivity() {
             var activityActivitiesBar = dash.createBarChart({

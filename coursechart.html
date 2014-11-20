@@ -56,26 +56,26 @@
         <svg></svg>
     </div>
     <div>
-    <div id="activities">
-    <h4>Activity Attempts</h4>
-        <svg></svg>
+        <div id="activities">
+        <h4>Activity Attempts</h4>
+            <svg></svg>
+        </div>
+
+        <div id="actorbar">
+           <h4></h4>
+            <svg></svg>
+        </div>
     </div>
-    
-    <div id="actorbar">
-       <h4></h4>
-        <svg></svg>
+    <div>
+        <div id="avgscore">
+        <h4>Average score per test</h4>
+            <svg></svg>
+        </div>
+        <div id="scoredist">
+           <h4></h4>
+            <svg></svg>
+        </div>
     </div>
-    </div>
-<!--
-    <div id="avgscore">
-    <h4>Average score per test</h4>
-        <svg></svg>
-    </div>
-    <div id="actorscore">
-       <h4></h4>
-        <svg></svg>
-    </div>
--->
     <script type="text/javascript">
         var wrapper = ADL.XAPIWrapper;
         wrapper.changeConfig({endpoint:"https://lrs.adlnet.gov/xapi/"});
@@ -88,7 +88,7 @@
             
             graphUserDetails();
             graphActivityAttempts();
-//            graphScores();
+            graphScores();
         };
         
         /******
@@ -228,29 +228,45 @@
                     chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
                     chart.yAxis.tickFormat(d3.format(',.5f'));
                 },
-//                child: actorScoresBar
+                child: answerDist
             });
             
             avgScoreBar.draw();
         }
         
-        // doesn't work
-//        var actorScoresBar = stmtdash.createBarChart({
-//            container: "#actorscore svg",
-//            groupBy: "object.id",
-//            pre: function(data, event) {
-//                d3.select('#actorscore h4').text('Test Average for Student');
-//                return data.where('verb.id = "' + ADL.verbs.scored.id + '" and ' +
-//                                  'actor.mbox = "' + event.in + '"');
-//            },
-//            aggregate: ADL.average('result.score.scaled'),
-//            customize: function(chart, event) {
-//                chart.xAxis.rotateLabels(45);
-//                chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
-//                chart.yAxis.tickFormat(d3.format(',.5f'));
-//            }
-//        });
-        
+        var answerDist = stmtdash.createMultiBarChart({
+            container: "#scoredist svg",
+            process: function(data, event, opts) {
+                // only return multichart info for posttest
+                var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] : 
+                          data.where('verb.id = "' + ADL.verbs.responded.id + '"')
+                            .orderBy('object.id')
+                            .contents
+                            .reduce(function(prev, cur, idx, arr){
+                                if (cur.context.contextActivities.parent[1].id == event.in)
+                                    for (loc in prev){
+                                        if (prev[loc].key == cur.result.response) {
+                                            for (var i = 0; i < prev[loc].values.length; i++) {
+                                                if (cur.object.id.lastIndexOf(prev[loc].values[i].in) == cur.object.id.length - 2) {
+                                                    prev[loc].values[i].out++;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                return prev;
+                            },[{key:'a',values:[{in:'q1',out:0, color:"#e6550d"},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0, color:"#e6550d"}]},
+                               {key:'b',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]},
+                               {key:'c',values:[{in:'q1',out:0},{in:'q2',out:0, color:"#e6550d"},{in:'q3',out:0, color:"#e6550d"},{in:'q4',out:0}]},
+                               {key:'d',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]}]);
+                opts.cb( thisd );
+            },
+            customize: function(chart, event) {
+                chart.groupSpacing(0.3);
+                chart.color(["#9ecae1", "#3182bd","#9ecae1", "#3182bd"]);
+            }
+        });
+      
         /*****
          *
          * Helper Methods
@@ -378,8 +394,8 @@
                                     "attempts": new Date(node.timestamp).toLocaleString(),
                                     "_values": getInteractionsArray(node).map(function(node){
                                         return {
-                                            "key":node.object.definition.description['en-US'] || node.object.id, // i want object.definition.description
-                                            "score":node.result.response, //i want result.response
+                                            "key":node.object.definition.description['en-US'] || node.object.id, 
+                                            "score":node.result.response,
                                             "attempts": new Date(node.timestamp).toLocaleString()
                                         };
                                     })
@@ -393,7 +409,7 @@
         }
         
         function getInteractionsArray(node) {
-            var ret = new ADL.Collection(CourseData.statements)
+            return new ADL.Collection(CourseData.statements)
                             .where("verb.id = '" + ADL.verbs.responded.id + "'")
                             .contents.reduce(function(prev, cur, idx, arr){
                                 if (arr[idx].context.contextActivities.grouping[0].id == 
@@ -401,8 +417,6 @@
                                     prev.push(arr[idx]);
                                 return prev;
                             }, []);
-//            var x = node;
-            return ret;
         }
 
         function getCourseToJobaidAttempts(stmts) {
