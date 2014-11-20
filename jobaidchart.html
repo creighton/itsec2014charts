@@ -41,7 +41,6 @@
 </head>
 <body>
     <h1>Android Job Aid Metrics</h1>
-<!--
     <div class="btn-group pull-right" data-toggle="buttons">
       <label class="btn btn-primary active">
         <input type="radio" name="options" id="canned" autocomplete="off" checked> Pre Canned Data
@@ -50,7 +49,6 @@
         <input type="radio" name="options" id="live" autocomplete="off"> LRS Data
       </label>
     </div>
--->
     <h4>Total # of times subject was accessed</h4>
     <div id="activities">
         <svg></svg>
@@ -73,27 +71,24 @@
         var dash = new ADL.XAPIDashboard();
         
         window.onload = function () {
-            // only get statements with "id": "http://adlnet.gov/jobaid/roses"
-            // and ADL.verbs.experienced
-//            $('#canned').on('click', function () {
-//                console.log("canned");
-//                drawCharts(false);
-//            })
-//            $('#live').on('click', function () {
-//                console.log("canned");
-//                drawCharts(true);
-//            })
+            $('input:radio[id="canned"]').on('change', function () {
+                console.log("canned");
+                drawCharts(false);
+            })
+            $('input:radio[id="live"]').on('change', function () {
+                console.log("live");
+                drawCharts(true);
+            })
             
             drawCharts(false);
-//            dash.fetchAllStatements({}, fetchDoneCallback);
-//            dash.addStatements(window.JAData);
-//            graphActivityActivity();
-//            graphActorActivityFrequency();
         };
         
         function drawCharts(live) {
             d3.select('svg').empty();
+            dash.data.contents = [];
             if (live) {
+                // only get statements with "id": "http://adlnet.gov/jobaid/roses"
+                // and ADL.verbs.experienced
                 dash.fetchAllStatements({'activity':'http://adlnet.gov/jobaid/roses','verb':ADL.verbs.experienced.id,'related_activities':'true'},
                                        function() {graphActivityActivity(); graphActorActivityFrequency();});
             }
@@ -116,6 +111,7 @@
                 },
                 child: actorBar 
             });
+            activityActivitiesBar.clear();
             activityActivitiesBar.draw();
         }
         
@@ -134,6 +130,7 @@
                 },
                 child: activityPie
             });
+            actorActivityBar.clear();
             actorActivityBar.draw();
         }
         
@@ -145,7 +142,6 @@
                 },
                 aggregate: ADL.count(),
                 customize: function(c) { 
-//                    c.height(350).width(400);
                     c.showLabels(false);
                 }
             });
