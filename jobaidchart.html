@@ -29,18 +29,44 @@
             height: 400px;
         }
         
-        #actors,
-        #activities 
+        .shadow
         {
-            clear: both;
-            float:left;
+            border: 1px solid #DDD;
+            border-spacing: 3px;
+            -webkit-box-shadow: 5px 5px 20px #AAA;
+	           -moz-box-shadow: 5px 5px 20px #AAA;
+	                box-shadow: 5px 5px 20px #AAA;
+            
         }
         
-        #actorbar div.nvtooltip { margin-left:600px };
+        .bar,
+        .circle
+        {
+            padding-top: 20px;
+            padding-right: 20px;
+            margin-left: 15px;
+            margin-bottom: 15px;
+            width: 650px;
+            height: 450px;
+        }
+        
+        .bar svg
+        {
+            padding-top: 15px;
+        }
+        
+        .bar div.nvtooltip { margin-top: 30px; }
+        
+        .graphcontainer
+        {
+            display: flex;
+        }
+        
+/*        #actorbar div.nvtooltip { margin-left:600px };*/
     </style>
 </head>
 <body>
-    <h1>Android Job Aid Metrics</h1>
+    <h1>Android Job Aid Metrics 
     <div class="btn-group pull-right" data-toggle="buttons">
       <label class="btn btn-primary active">
         <input type="radio" name="options" id="canned" autocomplete="off" checked> Pre Canned Data
@@ -49,21 +75,24 @@
         <input type="radio" name="options" id="live" autocomplete="off"> LRS Data
       </label>
     </div>
+    </h1>
     <h4>Total # of times subject was accessed</h4>
-    <div id="activities">
-        <svg></svg>
-    </div>
-    <div id="actorbar">
-       <h4></h4>
-        <svg></svg>
+    <div class="graphcontainer">
+        <div class="shadow bar">
+            <svg id="activities"></svg>
+        </div>
+        <div class="shadow bar">    
+            <svg id="actorbar"></svg>
+        </div>
     </div>
     <h4>Total # of times student used job aid</h4>
-    <div id="actors">
-        <svg></svg>
-    </div>
-    <div id="activitypie">
-       <h4></h4>
-        <svg></svg>
+    <div class="graphcontainer">
+        <div class="shadow bar">
+            <svg id="actors"></svg>
+        </div>
+        <div class="shadow circle">    
+            <svg id="activitypie"></svg>
+        </div>
     </div>
     <script type="text/javascript">
         var wrapper = ADL.XAPIWrapper;
@@ -102,7 +131,7 @@
         
         function graphActivityActivity() {
             var activityActivitiesBar = dash.createBarChart({
-                container: '#activities svg',
+                container: '#activities',
                 groupBy: 'object.id',
                 aggregate: ADL.count(),
                 customize: function (chart) {
@@ -117,7 +146,7 @@
         
         function graphActorActivityFrequency() {
             var actorActivityBar = dash.createBarChart({
-                container: '#actors svg',
+                container: '#actors',
                 groupBy: 'actor.mbox',
                 aggregate: ADL.count(),
                 customize: function (chart, event) {
@@ -135,7 +164,7 @@
         }
         
         var activityPie = dash.createPieChart({
-                container: "#activitypie svg",
+                container: "#activitypie",
                 groupBy: "object.id",
                 pre: function (data, event) {
                     return data.where('actor.mbox = "' + event.in + '"');
@@ -148,7 +177,7 @@
         activityPie.addOptions({smoothTransition:true});
         
         var actorBar = dash.createBarChart({
-                container: "#actorbar svg",
+                container: "#actorbar",
                 groupBy: "actor.mbox",
                 pre: function (data, event) {
                     return data.where('object.id = "' + event.in + '"');
