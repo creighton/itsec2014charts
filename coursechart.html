@@ -26,7 +26,7 @@
         
         svg
         {
-            width: 700px;
+            width: 600px;
             height: 400px;
         }
         
@@ -39,7 +39,40 @@
         
         #users
         {
-            width: 1100px;
+            border: 1px solid #CCC;
+        }
+        
+        .shadow
+        {
+            border: 1px solid #DDD;
+            border-spacing: 3px;
+            -webkit-box-shadow: 5px 5px 20px #AAA;
+	           -moz-box-shadow: 5px 5px 20px #AAA;
+	                box-shadow: 5px 5px 20px #AAA;
+            
+        }
+        
+        .bar,
+        .circle
+        {
+            padding-top: 20px;
+            padding-right: 20px;
+            margin-left: 15px;
+            margin-bottom: 15px;
+            width: 650px;
+            height: 450px;
+        }
+        
+        .bar svg
+        {
+            padding-top: 15px;
+        }
+        
+        .bar div.nvtooltip { margin-top: 30px; }
+        
+        .graphcontainer
+        {
+            display: flex;
         }
         
         #actorbar div.nvtooltip { margin-left:700px };
@@ -62,27 +95,24 @@
     </div>
     <div id="userChart">
         <h4></h4>
-        <svg></svg>
+        <svg class="shadow"></svg>
     </div>
-    <div>
-        <div id="activities">
-        <h4>Activity Attempts</h4>
-            <svg></svg>
+    <h4>Activity Attempts</h4>
+    <div class="graphcontainer">
+        <div class="shadow bar">
+            <svg id="activities"></svg>
         </div>
-
-        <div id="actorbar">
-           <h4></h4>
-            <svg></svg>
+        <div class="shadow bar">    
+            <svg id="actorbar"></svg>
         </div>
     </div>
-    <div>
-        <div id="avgscore">
-        <h4>Average score per test</h4>
-            <svg></svg>
+    <h4>Average score per test</h4>
+    <div class="graphcontainer">
+        <div class="shadow bar">
+            <svg id="avgscore"></svg>
         </div>
-        <div id="scoredist">
-           <h4></h4>
-            <svg></svg>
+        <div class="shadow bar">    
+            <svg id="scoredist"></svg>
         </div>
     </div>
     <script type="text/javascript">
@@ -105,9 +135,13 @@
         };
         
         function drawCharts(live) {
+            window.Course = {};
+            window.Jobaid = {};
             d3.select('svg').empty();
+            d3.selectAll("svg > *").remove();
             stmtdash.data.contents = [];
             if (live) {
+                window.Jobaid = getLiveJobAidData();
                 // only get statements with "id": "http://adlnet.gov/jobaid/roses"
                 // and ADL.verbs.experienced
                 stmtdash.fetchAllStatements({'activity':'http://adlnet.gov/courses/roses','related_activities':'true'},
@@ -116,11 +150,11 @@
                             statements: stmtdash.data.contents.slice(0),
                             activityprofiles: getLiveActivityAttempts(stmtdash.data.contents)
                         };
-                        getLiveActivityAttempts()
-                        window.Jobaid = getLiveJobAidData();
                         graphUserDetails();
                         graphActivityAttempts();
                         graphScores();
+                        // show no data available
+                        graphUserChart('n');
                     }
                );
                 
@@ -136,32 +170,65 @@
                 graphUserDetails();
                 graphActivityAttempts();
                 graphScores();
+                // show no data available
+                graphUserChart('n');
             }
             
         }
         
         function getLiveJobAidData() {
             var stmts = [];
-            ADL.XAPIWrapper.getStatements({activity:'http://adlnet.gov/jobaid/roses', 
-                                           related_activities:'true', 
-                                           verb: ADL.verbs.experienced.id}, null, 
-               function getmore(r){
-                  var res = JSON.parse(r.response);
-                  stmts.concat(res.statements);
-                  if (res.more && res.more !== ""){
-                     ADL.XAPIWrapper.getStatements(null, res.more, getmore);
-                  }
-               });
+            var res = ADL.XAPIWrapper.getStatements({activity:'http://adlnet.gov/jobaid/roses', 
+                                                   related_activities:'true', 
+                                                   verb: ADL.verbs.experienced.id}); 
+
+            stmts = stmts.concat(res.statements);
+            while (res.more && res.more !== "") {
+                res = ADL.XAPIWrapper.getStatements(null, res.more);
+                stmts = stmts.concat(res.statements);
+            }
+
+            return stmts;
         }
         
         // don't change stmts
         function getLiveActivityAttempts(stmts) {
-            return "gimme a min";
             // go through the statements and get actors
-            // for each user,
-            //   get activity state
-            //   for each attempt in attempts 
-            //     add attempt
+            var actset = ["http://adlnet.gov/courses/roses/what",
+                          "http://adlnet.gov/courses/roses/pruning",
+                          "http://adlnet.gov/courses/roses/deadheading",
+                          "http://adlnet.gov/courses/roses/shearing",
+                          "http://adlnet.gov/courses/roses/hybrids",
+                          "http://adlnet.gov/courses/roses/styles",
+                          "http://adlnet.gov/courses/roses/symbolism",
+                          "http://adlnet.gov/courses/roses/q1",
+                          "http://adlnet.gov/courses/roses/q2",
+                          "http://adlnet.gov/courses/roses/q3",
+                          "http://adlnet.gov/courses/roses/q4",
+                          "http://adlnet.gov/courses/roses/posttest"];
+            var actors = stmts.reduce(function(prev, cur, idx, arr){
+                var astr = JSON.stringify(cur.actor);
+                if ( prev.indexOf(astr) == -1 ) prev.push(astr);
+                return prev;
+            }, []);
+            
+            //profiles.actormbox.activityid.attempts = [attmemptiri]
+            var ret = {profiles:{}}; 
+            for (idx in actors) {
+                var actobj = JSON.parse(actors[idx]);
+                var actkey = actobj.account.name;
+                ret.profiles[actkey] = {};
+                for (act in actset) {
+                    ret.profiles[actkey][actset[act]] = {attempts:[]};
+                    try {
+                        var atts = ADL.XAPIWrapper.getState(actset[act], 
+                            actobj, "http://adlnet.gov/xapi/profile/scorm/activity-state");
+                        ret.profiles[actkey][actset[act]].attempts = atts.attempts;
+                    } catch (e) {}
+                }
+                
+            }
+            return ret;
         }
         
         /******
@@ -207,10 +274,43 @@
             });
         }
         
+        function graphUserChart(mbox) {
+            // maybe a new dashboard here
+            // what about course activity attempts + job aid attempts
+            var coll = new ADL.Collection(Course.statements),
+                contents = coll.where('actor.account.name = "'+ mbox +'"').contents;
+            
+            if (contents.length > 0) {
+                actorname = contents[0].actor.name;
+                contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(Jobaid).where('actor.mbox = "mailto:'+ mbox +'"').contents)));
+            }
+
+            nv.addGraph(function() {
+                var chart = nv.models.multiBarChart()
+                            .reduceXTicks(false)
+                            .rotateLabels(45)
+                            .groupSpacing(0.5)
+                            .color(["#ff9896", "#9467bd"]);
+                
+                chart.xAxis
+                    .tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
+
+                d3.select('#userChart')
+                    .datum(contents)
+                    .transition().duration(500)
+                    .call(chart)
+                    ;
+
+                nv.utils.windowResize(chart.update);
+
+                return chart;
+            });
+        }
+        
         function graphActivityAttempts() {
             
             var activityAttemptsBar = attdash.createBarChart({
-                container: '#activities svg',
+                container: '#activities',
                 process: function (data, event, opts) { 
                     var d = mapProfileData(Course.activityprofiles.profiles);
                     attdash.data = new ADL.Collection(d).contents;
@@ -235,11 +335,12 @@
                 },
                 child: actorBar 
             });
+            activityAttemptsBar.clear();
             activityAttemptsBar.draw();
         }
         
         var actorBar = attdash.createBarChart({
-                container: "#actorbar svg",
+                container: "#actorbar",
                 groupBy: "actor.account.name",
                 process: function (data, event, opts) {
                     d3.select('#actorbar h4').text("'" + /[^\/]+$/.exec(event.in)[0] + "' Attempts by Actor");
@@ -253,44 +354,18 @@
                     c.xAxis.tickFormat(function(d,e,f){
                         var coll = new ADL.Collection(Course.statements);
                         var contents = coll.where('actor.account.name = "'+ d +'"').contents;
-                        return contents[0].actor.name || d;
+                        if (contents[0].actor.name !== undefined)
+                            return contents[0].actor.name;
+                        else if (contents[0].actor.account !== undefined)
+                            return contents[0].actor.account.name.split('@')[0];
+                        return d;
                     });
                 }
             });
         
-        function graphUserChart(mbox) {
-            // maybe a new dashboard here
-            // what about course activity attempts + job aid attempts
-            var coll = new ADL.Collection(Course.statements),
-                contents = coll.where('actor.account.name = "'+ mbox +'"').contents,
-                actorname = contents[0].actor.name;
-            contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(Jobaid).where('actor.mbox = "mailto:'+ mbox +'"').contents)));
-
-            nv.addGraph(function() {
-                var chart = nv.models.multiBarChart()
-                            .reduceXTicks(false)
-                            .rotateLabels(45)
-                            .groupSpacing(0.5)
-                            .color(["#ff9896", "#9467bd"]);
-                
-                chart.xAxis
-                    .tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
-
-                d3.select('#userChart svg')
-                    .datum(contents)
-                    .transition().duration(500)
-                    .call(chart)
-                    ;
-
-                nv.utils.windowResize(chart.update);
-
-                return chart;
-            });
-        }
-        
         function graphScores() {
             var avgScoreBar = stmtdash.createBarChart({
-                container: "#avgscore svg",
+                container: "#avgscore",
                 groupBy: 'object.id',
                 pre: function (data, event) {
                     return data.where('verb.id = "' + ADL.verbs.scored.id + '"');
@@ -304,11 +379,12 @@
                 child: answerDist
             });
             
+            avgScoreBar.clear();
             avgScoreBar.draw();
         }
         
         var answerDist = stmtdash.createMultiBarChart({
-            container: "#scoredist svg",
+            container: "#scoredist",
             process: function(data, event, opts) {
                 // only return multichart info for posttest
                 var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] : 
