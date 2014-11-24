@@ -30,16 +30,11 @@
             height: 400px;
         }
         
-        #avgscore,
-        #activities
-        {
-            clear: both;
-            float:left;
-        }
-        
         #users
         {
             border: 1px solid #CCC;
+            margin: 15px;
+            padding: 10px;
         }
         
         .shadow
@@ -90,12 +85,14 @@
     </div>
     </h1>
     <div id="users">
-        <h4>Learner Info</h4>
+        <h4>Learner Course Activity</h4>
         <div id="userdetails"></div>
     </div>
+    <h4>Course to Job Aid Attempts</h4>
     <div id="userChart">
-        <h4></h4>
-        <svg class="shadow"></svg>
+       <div class="shadow bar">
+            <svg></svg>
+        </div>
     </div>
     <h4>Activity Attempts</h4>
     <div class="graphcontainer">
@@ -290,12 +287,13 @@
                             .reduceXTicks(false)
                             .rotateLabels(45)
                             .groupSpacing(0.5)
-                            .color(["#ff9896", "#9467bd"]);
+                            .color(["#ff9896", "#9467bd"])
+                            .height(375);
                 
                 chart.xAxis
                     .tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
 
-                d3.select('#userChart')
+                d3.select('#userChart div svg')
                     .datum(contents)
                     .transition().duration(500)
                     .call(chart)
