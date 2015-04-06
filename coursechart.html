@@ -390,7 +390,9 @@
                             .orderBy('object.id')
                             .contents
                             .reduce(function(prev, cur, idx, arr){
-                                if (cur.context.contextActivities.parent[1].id == event.in)
+                                var arr = cur.context.contextActivities.grouping || [];
+                                arr = arr.concat(cur.context.contextActivities.parent);
+                                if (arr.reduce(function(p, val, idx, ar) { if (val.id === event.in) return val; }))
                                     for (loc in prev){
                                         if (prev[loc].key == cur.result.response) {
                                             for (var i = 0; i < prev[loc].values.length; i++) {
