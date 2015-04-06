@@ -541,7 +541,7 @@
                                     "attempts": new Date(node.timestamp).toLocaleString(),
                                     "_values": getInteractionsArray(node).map(function(node){
                                         return {
-                                            "key":node.object.definition.description['en-US'] || node.object.id, 
+                                            "key":(node.object.definition && node.object.definition.description)?node.object.definition.description['en-US'] || node.object.id : node.object.id, 
                                             "score":node.result.response,
                                             "attempts": new Date(node.timestamp).toLocaleString()
                                         };
