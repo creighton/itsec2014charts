@@ -23,20 +23,20 @@
             width: 1500px;
             padding-left: 20px;
         }
-        
+
         svg
         {
             width: 600px;
             height: 400px;
         }
-        
+
         #users
         {
             border: 1px solid #CCC;
             margin: 15px;
             padding: 10px;
         }
-        
+
         .shadow
         {
             border: 1px solid #DDD;
@@ -44,9 +44,9 @@
             -webkit-box-shadow: 5px 5px 20px #AAA;
 	           -moz-box-shadow: 5px 5px 20px #AAA;
 	                box-shadow: 5px 5px 20px #AAA;
-            
+
         }
-        
+
         .bar,
         .circle
         {
@@ -57,19 +57,19 @@
             width: 650px;
             height: 450px;
         }
-        
+
         .bar svg
         {
             padding-top: 15px;
         }
-        
+
         .bar div.nvtooltip { margin-top: 30px; }
-        
+
         .graphcontainer
         {
             display: flex;
         }
-        
+
         #actorbar div.nvtooltip { margin-left:700px };
     </style>
 </head>
@@ -99,7 +99,7 @@
         <div class="shadow bar">
             <svg id="activities"></svg>
         </div>
-        <div class="shadow bar">    
+        <div class="shadow bar">
             <svg id="actorbar"></svg>
         </div>
     </div>
@@ -108,7 +108,7 @@
         <div class="shadow bar">
             <svg id="avgscore"></svg>
         </div>
-        <div class="shadow bar">    
+        <div class="shadow bar">
             <svg id="scoredist"></svg>
         </div>
     </div>
@@ -127,10 +127,10 @@
                 console.log("live");
                 drawCharts(true);
             })
-            
+
             drawCharts(false);
         };
-        
+
         function drawCharts(live) {
             window.Course = {};
             window.Jobaid = {};
@@ -154,15 +154,15 @@
                         graphUserChart('n');
                     }
                );
-                
+
             }
             else {
                 stmtdash.addStatements(window.CourseData.statements);
                 window.Course = {
-                    statements: stmtdash.data.contents.slice(0), 
+                    statements: stmtdash.data.contents.slice(0),
                     activityprofiles: JSON.parse(JSON.stringify(window.CourseData.activityprofiles))
                 };
-                
+
                 window.Jobaid = JSON.parse(JSON.stringify(JAData));
                 graphUserDetails();
                 graphActivityAttempts();
@@ -170,14 +170,14 @@
                 // show no data available
                 graphUserChart('n');
             }
-            
+
         }
-        
+
         function getLiveJobAidData() {
             var stmts = [];
-            var res = ADL.XAPIWrapper.getStatements({activity:'http://adlnet.gov/jobaid/roses', 
-                                                   related_activities:'true', 
-                                                   verb: ADL.verbs.experienced.id}); 
+            var res = ADL.XAPIWrapper.getStatements({activity:'http://adlnet.gov/jobaid/roses',
+                                                   related_activities:'true',
+                                                   verb: ADL.verbs.experienced.id});
 
             stmts = stmts.concat(res.statements);
             while (res.more && res.more !== "") {
@@ -187,7 +187,7 @@
 
             return stmts;
         }
-        
+
         // don't change stmts
         function getLiveActivityAttempts(stmts) {
             // go through the statements and get actors
@@ -208,9 +208,9 @@
                 if ( prev.indexOf(astr) == -1 ) prev.push(astr);
                 return prev;
             }, []);
-            
+
             //profiles.actormbox.activityid.attempts = [attmemptiri]
-            var ret = {profiles:{}}; 
+            var ret = {profiles:{}};
             for (idx in actors) {
                 var actobj = JSON.parse(actors[idx]);
                 var actkey = actobj.account.name;
@@ -218,22 +218,22 @@
                 for (act in actset) {
                     ret.profiles[actkey][actset[act]] = {attempts:[]};
                     try {
-                        var atts = ADL.XAPIWrapper.getState(actset[act], 
-                            actobj, "http://adlnet.gov/xapi/profile/scorm/activity-state");
+                        var atts = ADL.XAPIWrapper.getState(actset[act],
+                            actobj, "https://w3id.org/xapi/scorm/activity-state");
                         ret.profiles[actkey][actset[act]].attempts = atts.attempts;
                     } catch (e) {}
                 }
-                
+
             }
             return ret;
         }
-        
+
         /******
          *
          * Charts
          *
          *****/
-        
+
         function graphUserDetails() {
             var data = convertCollToData(new ADL.Collection(Course.statements).where('verb.id !="'+ADL.verbs.responded.id+'"').groupBy('actor.account.name'));
             nv.addGraph(function() {
@@ -270,13 +270,13 @@
               return chart;
             });
         }
-        
+
         function graphUserChart(mbox) {
             // maybe a new dashboard here
             // what about course activity attempts + job aid attempts
             var coll = new ADL.Collection(Course.statements),
                 contents = coll.where('actor.account.name = "'+ mbox +'"').contents;
-            
+
             if (contents.length > 0) {
                 actorname = contents[0].actor.name;
                 contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(Jobaid).where('actor.mbox = "mailto:'+ mbox +'"').contents)));
@@ -289,7 +289,7 @@
                             .groupSpacing(0.5)
                             .color(["#ff9896", "#9467bd"])
                             .height(375);
-                
+
                 chart.xAxis
                     .tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
 
@@ -304,26 +304,26 @@
                 return chart;
             });
         }
-        
+
         function graphActivityAttempts() {
-            
+
             var activityAttemptsBar = attdash.createBarChart({
                 container: '#activities',
-                process: function (data, event, opts) { 
+                process: function (data, event, opts) {
                     var d = mapProfileData(Course.activityprofiles.profiles);
                     attdash.data = new ADL.Collection(d).contents;
-                    opts.cb(                        
-                        d.reduce(function(last, now){ 
+                    opts.cb(
+                        d.reduce(function(last, now){
                                     var added = false;
-                                    for(var i in last) { 
-                                        if ( last[i].in == now.actid ){ 
-                                             last[i].out += now.attempts.length; 
+                                    for(var i in last) {
+                                        if ( last[i].in == now.actid ){
+                                             last[i].out += now.attempts.length;
                                             added = true;
                                         }
-                                    } 
+                                    }
                                     if (!added)
                                         last.push({in:now.actid,out:now.attempts.length});
-                                    return last; 
+                                    return last;
                                 }, [])//;
                     );
                 },
@@ -331,12 +331,12 @@
                     chart.xAxis.rotateLabels(45);
                     chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
                 },
-                child: actorBar 
+                child: actorBar
             });
             activityAttemptsBar.clear();
             activityAttemptsBar.draw();
         }
-        
+
         var actorBar = attdash.createBarChart({
                 container: "#actorbar",
                 groupBy: "actor.account.name",
@@ -347,7 +347,7 @@
                     opts.cb( d.map(function(node) { return {in: node.user, out: node.attempts.length};}) );
                 },
                 aggregate: ADL.count(),
-                customize: function(c) { 
+                customize: function(c) {
                     c.xAxis.rotateLabels(45);
                     c.xAxis.tickFormat(function(d,e,f){
                         var coll = new ADL.Collection(Course.statements);
@@ -360,7 +360,7 @@
                     });
                 }
             });
-        
+
         function graphScores() {
             var avgScoreBar = stmtdash.createBarChart({
                 container: "#avgscore",
@@ -376,16 +376,16 @@
                 },
                 child: answerDist
             });
-            
+
             avgScoreBar.clear();
             avgScoreBar.draw();
         }
-        
+
         var answerDist = stmtdash.createMultiBarChart({
             container: "#scoredist",
             process: function(data, event, opts) {
                 // only return multichart info for posttest
-                var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] : 
+                var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] :
                           data.where('verb.id = "' + ADL.verbs.responded.id + '"')
                             .orderBy('object.id')
                             .contents
@@ -415,15 +415,15 @@
                 chart.color(["#9ecae1", "#3182bd","#9ecae1", "#3182bd"]);
             }
         });
-      
+
         /*****
          *
          * Helper Methods
          *
          *****/
-        
+
         /* takes
-        *  { 
+        *  {
               user id: {
                  activity id: {
                      attempts : [ attempt ids ]
@@ -439,10 +439,10 @@
               }, ...
             ]
         */
-        function mapProfileData( data ) { 
+        function mapProfileData( data ) {
             var ret = [];
             for (var key in data) {
-                
+
                 if (data.hasOwnProperty(key)) {
                     for (var actkey in data[key]) {
                         if (data[key].hasOwnProperty(actkey)) {
@@ -452,25 +452,25 @@
                             ob.attempts = data[key][actkey]["attempts"];
                             ret.push(ob);
                         }
-                        
+
                     }
                 }
-                
+
             }
             return ret;
         }
-        
+
         /*
         + we want
         learner         score     attempts
-        - activity 
+        - activity
         -- attempt
         etc
         ++ so collection.groupby actor mbox
         contents: [
             {
                 group: actor mbox,
-                data: [ actor's statements 
+                data: [ actor's statements
                     {
                         "actor"..
                         "verb" ..
@@ -479,7 +479,7 @@
                 ]
             }, (more actors)
         ]
-        
+
         ++ turned into this:
             [
                 {
@@ -520,7 +520,7 @@
                     "key": node.data[0].actor.name || node.group,
                     "score": getLearnerFinalScore(node),
                     "attempts": new ADL.Collection(node.data)
-                            .where('object.id = "http://adlnet.gov/courses/roses/posttest"' + 
+                            .where('object.id = "http://adlnet.gov/courses/roses/posttest"' +
                                    ' and verb.id = "' + ADL.verbs.terminated.id + '"')
                             .contents.length,
                     "actor": node.group,
@@ -543,7 +543,7 @@
                                     "attempts": new Date(node.timestamp).toLocaleString(),
                                     "_values": getInteractionsArray(node).map(function(node){
                                         return {
-                                            "key":(node.object.definition && node.object.definition.description)?node.object.definition.description['en-US'] || node.object.id : node.object.id, 
+                                            "key":(node.object.definition && node.object.definition.description)?node.object.definition.description['en-US'] || node.object.id : node.object.id,
                                             "score":node.result.response,
                                             "attempts": new Date(node.timestamp).toLocaleString()
                                         };
@@ -556,12 +556,12 @@
             });
             return [{"key":"Roses Course", "values": data}];
         }
-        
+
         function getInteractionsArray(node) {
             return new ADL.Collection(Course.statements)
                             .where("verb.id = '" + ADL.verbs.responded.id + "'")
                             .contents.reduce(function(prev, cur, idx, arr){
-                                if (arr[idx].context.contextActivities.grouping[0].id == 
+                                if (arr[idx].context.contextActivities.grouping[0].id ==
                                     node.context.contextActivities.grouping[0].id)
                                     prev.push(arr[idx]);
                                 return prev;
@@ -583,7 +583,7 @@
                         prev[cur.group] = cur.data;
                         return prev;
                     }, {});
-            
+
             for (idx in actset) {
                 var actid = actset[idx],
                     cid = actid.replace("/jobaid/","/courses/"),
@@ -591,47 +591,47 @@
                 course.values.push({x: key, y: (activities[cid])?activities[cid].length:0});
                 jobaid.values.push({x: key, y: (activities[actid])?activities[actid].length:0});
             }
-            
+
             return [course,jobaid];
         }
-        
+
         function getLearnerFinalScore(node) {
             var col = new ADL.Collection(node.data).where(
                 'object.id = "http://adlnet.gov/courses/roses/posttest"' +
                 ' and verb.id="'+ ADL.verbs.scored.id +'"');
-            
+
             if (col.contents.length != 0)
                 return (col.contents[0].result.score.scaled != 0) ?
                     d3.format(',.2f')(col.contents[0].result.score.scaled) : "0";
             else
                 return "-";
         }
-        
+
         function getActivityTestScoreAverage(node) {
             var col = new ADL.Collection(node.data)
                             .where('verb.id = "'+ADL.verbs.scored.id+'"');
-            
+
             var avgs = col.average('result.score.scaled').contents;
             if (avgs[0].data.length != 0)
                 return (avgs[0].average != 0)?d3.format(',.3f')(avgs[0].average) + " (avg)" : "0";
             else
                 return "-";
         }
-        
+
         function getActivityScoredOrCompletedArray(node) {
             var scored = new ADL.Collection(node.data).where('verb.id = "'+ADL.verbs.scored.id+'"').contents;
             if (scored.length != 0) return scored;
-            
+
             return new ADL.Collection(node.data).where('verb.id = "'+ADL.verbs.completed.id+'"').contents;
         }
-        
+
         function getAttemptScore(node) {
             if(node.result){
                 return (node.result.score.scaled != 0) ? d3.format(',.2f')(node.result.score.scaled) : "0";
             }
             return "-";
         }
-        
+
         function orderByTimestamp(stmts) {
             stmts.sort(function(a,b){
               // Turn your strings into dates, and then subtract them
