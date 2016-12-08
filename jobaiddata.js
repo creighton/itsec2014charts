@@ -128,6 +128,14 @@ window.JAData = (function () {
                     ],
                     "grouping": [
                         { "id": "" }
+                    ],
+                    "category": [
+                        {
+                            "id": "https://w3id.org/xapi/scorm",
+                            "definition": {
+                                "type": "http://adlnet.gov/expapi/activities/profile"
+                            }
+                        }
                     ]
                 }
             }
