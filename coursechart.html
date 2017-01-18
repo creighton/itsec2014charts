@@ -112,9 +112,22 @@
             <svg id="scoredist"></svg>
         </div>
     </div>
-    <script type="text/javascript">
-        var wrapper = ADL.XAPIWrapper;
-        wrapper.changeConfig({endpoint:"https://lrs.adlnet.gov/xapi/"});
+    <script type="text/javascript">        
+        ADL.launch(function(err, launchdata, xAPIWrapper) {
+            if (!err) {
+                ADL.XAPIWrapper = xAPIWrapper;
+                console.log("--- content launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs, "\n", launchdata);
+            } else {
+                alert("This is not being launched via xAPI Launch");
+                ADL.XAPIWrapper.changeConfig({
+                    "endpoint":"https://lrs.adlnet.gov/xapi/",
+                    "user":"tom",
+                    "password":"1234"
+                });
+                console.log("--- content not launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs);
+            }
+        }, true);
+
         var stmtdash = new ADL.XAPIDashboard();
         var attdash = new ADL.XAPIDashboard();
 
