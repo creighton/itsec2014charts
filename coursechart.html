@@ -112,36 +112,34 @@
             <svg id="scoredist"></svg>
         </div>
     </div>
-    <script type="text/javascript">        
-        ADL.launch(function(err, launchdata, xAPIWrapper) {
-            if (!err) {
-                ADL.XAPIWrapper = xAPIWrapper;
-                console.log("--- content launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs, "\n", launchdata);
-            } else {
-                alert("This is not being launched via xAPI Launch");
-                ADL.XAPIWrapper.changeConfig({
-                    "endpoint":"https://lrs.adlnet.gov/xapi/",
-                    "user":"tom",
-                    "password":"1234"
-                });
-                console.log("--- content not launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs);
-            }
-        }, true);
-
-        var stmtdash = new ADL.XAPIDashboard();
-        var attdash = new ADL.XAPIDashboard();
-
+    <script type="text/javascript">
+        var stmtdash, attdash;   
         window.onload = function () {
-            $('input:radio[id="canned"]').on('change', function () {
-                console.log("canned");
+            ADL.launch(function(err, launchdata, xAPIWrapper) {
+                if (!err) {
+                    ADL.XAPIWrapper = xAPIWrapper;
+                    console.log("--- content launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs, "\n", launchdata);
+                } else {
+                    alert("This is not being launched via xAPI Launch");
+                    ADL.XAPIWrapper.changeConfig({
+                        "endpoint":"https://lrs.adlnet.gov/xapi/",
+                        "user":"tom",
+                        "password":"1234"
+                    });
+                    console.log("--- content not launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs);
+                }
+                stmtdash = new ADL.XAPIDashboard();
+                attdash = new ADL.XAPIDashboard();
+                $('input:radio[id="canned"]').on('change', function () {
+                    console.log("canned");
+                    drawCharts(false);
+                })
+                $('input:radio[id="live"]').on('change', function () {
+                    console.log("live");
+                    drawCharts(true);
+                })
                 drawCharts(false);
-            })
-            $('input:radio[id="live"]').on('change', function () {
-                console.log("live");
-                drawCharts(true);
-            })
-
-            drawCharts(false);
+            }, true);
         };
 
         function drawCharts(live) {
@@ -217,9 +215,11 @@
                           "http://adlnet.gov/courses/roses/q4",
                           "http://adlnet.gov/courses/roses/posttest"];
             var actors = stmts.reduce(function(prev, cur, idx, arr){
-                var astr = JSON.stringify(cur.actor);
-                if ( prev.indexOf(astr) == -1 ) prev.push(astr);
-                return prev;
+                if ('account' in cur.actor){
+                    var astr = JSON.stringify(cur.actor);
+                    if ( prev.indexOf(astr) == -1 ) prev.push(astr);
+                    return prev;                    
+                }
             }, []);
 
             //profiles.actormbox.activityid.attempts = [attmemptiri]
@@ -344,13 +344,14 @@
                     chart.xAxis.rotateLabels(45);
                     chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
                 },
-                child: actorBar
+                child: graphActorBar()
             });
             activityAttemptsBar.clear();
             activityAttemptsBar.draw();
         }
 
-        var actorBar = attdash.createBarChart({
+        function graphActorBar() {
+            return attdash.createBarChart({
                 container: "#actorbar",
                 groupBy: "actor.account.name",
                 process: function (data, event, opts) {
@@ -373,7 +374,7 @@
                     });
                 }
             });
-
+        }
         function graphScores() {
             var avgScoreBar = stmtdash.createBarChart({
                 container: "#avgscore",
@@ -387,48 +388,49 @@
                     chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
                     chart.yAxis.tickFormat(d3.format(',.5f'));
                 },
-                child: answerDist
+                child: graphAnswerDist()
             });
 
             avgScoreBar.clear();
             avgScoreBar.draw();
         }
 
-        var answerDist = stmtdash.createMultiBarChart({
-            container: "#scoredist",
-            process: function(data, event, opts) {
-                // only return multichart info for posttest
-                var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] :
-                          data.where('verb.id = "' + ADL.verbs.responded.id + '"')
-                            .orderBy('object.id')
-                            .contents
-                            .reduce(function(prev, cur, idx, arr){
-                                var arr = cur.context.contextActivities.grouping || [];
-                                arr = arr.concat(cur.context.contextActivities.parent);
-                                if (arr.reduce(function(p, val, idx, ar) { if (val.id === event.in) return val; }))
-                                    for (loc in prev){
-                                        if (prev[loc].key == cur.result.response) {
-                                            for (var i = 0; i < prev[loc].values.length; i++) {
-                                                if (cur.object.id.lastIndexOf(prev[loc].values[i].in) == cur.object.id.length - 2) {
-                                                    prev[loc].values[i].out++;
-                                                    break;
+        function graphAnswerDist() {
+            return stmtdash.createMultiBarChart({
+                container: "#scoredist",
+                process: function(data, event, opts) {
+                    // only return multichart info for posttest
+                    var thisd = (event.in != "http://adlnet.gov/courses/roses/posttest") ? [] :
+                              data.where('verb.id = "' + ADL.verbs.responded.id + '"')
+                                .orderBy('object.id')
+                                .contents
+                                .reduce(function(prev, cur, idx, arr){
+                                    var arr = cur.context.contextActivities.grouping || [];
+                                    arr = arr.concat(cur.context.contextActivities.parent);
+                                    if (arr.reduce(function(p, val, idx, ar) { if (val.id === event.in) return val; }))
+                                        for (loc in prev){
+                                            if (prev[loc].key == cur.result.response) {
+                                                for (var i = 0; i < prev[loc].values.length; i++) {
+                                                    if (cur.object.id.lastIndexOf(prev[loc].values[i].in) == cur.object.id.length - 2) {
+                                                        prev[loc].values[i].out++;
+                                                        break;
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                return prev;
-                            },[{key:'a',values:[{in:'q1',out:0, color:"#e6550d"},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0, color:"#e6550d"}]},
-                               {key:'b',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]},
-                               {key:'c',values:[{in:'q1',out:0},{in:'q2',out:0, color:"#e6550d"},{in:'q3',out:0, color:"#e6550d"},{in:'q4',out:0}]},
-                               {key:'d',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]}]);
-                opts.cb( thisd );
-            },
-            customize: function(chart, event) {
-                chart.groupSpacing(0.3);
-                chart.color(["#9ecae1", "#3182bd","#9ecae1", "#3182bd"]);
-            }
-        });
-
+                                    return prev;
+                                },[{key:'a',values:[{in:'q1',out:0, color:"#e6550d"},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0, color:"#e6550d"}]},
+                                   {key:'b',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]},
+                                   {key:'c',values:[{in:'q1',out:0},{in:'q2',out:0, color:"#e6550d"},{in:'q3',out:0, color:"#e6550d"},{in:'q4',out:0}]},
+                                   {key:'d',values:[{in:'q1',out:0},{in:'q2',out:0},{in:'q3',out:0},{in:'q4',out:0}]}]);
+                    opts.cb( thisd );
+                },
+                customize: function(chart, event) {
+                    chart.groupSpacing(0.3);
+                    chart.color(["#9ecae1", "#3182bd","#9ecae1", "#3182bd"]);
+                }
+            });
+        }
         /*****
          *
          * Helper Methods

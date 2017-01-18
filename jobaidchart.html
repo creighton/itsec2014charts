@@ -94,36 +94,35 @@
             <svg id="activitypie"></svg>
         </div>
     </div>
-    <script type="text/javascript">        
-        ADL.launch(function(err, launchdata, xAPIWrapper) {
-            if (!err) {
-                ADL.XAPIWrapper = xAPIWrapper;
-                console.log("--- content launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs, "\n", launchdata);
-            } else {
-                alert("This is not being launched via xAPI Launch");
-                ADL.XAPIWrapper.changeConfig({
-                    "endpoint":"https://lrs.adlnet.gov/xapi/",
-                    "user":"tom",
-                    "password":"1234"
-                });
-                console.log("--- content not launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs);
-            }
-        }, true);
-
-        var dash = new ADL.XAPIDashboard();        
+    <script type="text/javascript">
+        var dash;
         window.onload = function () {
-            $('input:radio[id="canned"]').on('change', function () {
-                console.log("canned");
+            ADL.launch(function(err, launchdata, xAPIWrapper) {
+                if (!err) {
+                    ADL.XAPIWrapper = xAPIWrapper;
+                    console.log("--- content launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs, "\n", launchdata);
+                } else {
+                    alert("This is not being launched via xAPI Launch");
+                    ADL.XAPIWrapper.changeConfig({
+                        "endpoint":"https://lrs.adlnet.gov/xapi/",
+                        "user":"tom",
+                        "password":"1234"
+                    });
+                    console.log("--- content not launched via xAPI Launch ---\n", ADL.XAPIWrapper.lrs);
+                }
+                dash = new ADL.XAPIDashboard();
+                $('input:radio[id="canned"]').on('change', function () {
+                    console.log("canned");
+                    drawCharts(false);
+                })
+                $('input:radio[id="live"]').on('change', function () {
+                    console.log("live");
+                    drawCharts(true);
+                })
                 drawCharts(false);
-            })
-            $('input:radio[id="live"]').on('change', function () {
-                console.log("live");
-                drawCharts(true);
-            })
-            
-            drawCharts(false);
+            }, true);
         };
-        
+
         function drawCharts(live) {
             d3.select('svg').empty();
             dash.data.contents = [];
@@ -150,7 +149,7 @@
                     chart.xAxis.rotateLabels(45);
                     chart.xAxis.tickFormat(function(d){return /[^\/]+$/.exec(d)[0];});
                 },
-                child: actorBar 
+                child: graphActorBar() 
             });
             activityActivitiesBar.clear();
             activityActivitiesBar.draw();
@@ -172,13 +171,14 @@
                         return "all";
                     });
                 },
-                child: activityPie
+                child: graphActivityPie()
             });
             actorActivityBar.clear();
             actorActivityBar.draw();
         }
         
-        var activityPie = dash.createPieChart({
+        function graphActivityPie() {
+            var activityPie = dash.createPieChart({
                 container: "#activitypie",
                 groupBy: "object.id",
                 pre: function (data, event) {
@@ -189,9 +189,12 @@
                     c.showLabels(false);
                 }
             });
-        activityPie.addOptions({smoothTransition:true});
-        
-        var actorBar = dash.createBarChart({
+            activityPie.addOptions({smoothTransition:true});
+            return activityPie;
+        }
+
+        function graphActorBar() {
+            var actorBar = dash.createBarChart({
                 container: "#actorbar",
                 groupBy: "actor.mbox",
                 pre: function (data, event) {
@@ -207,6 +210,8 @@
                     });
                 }
             });
+            return actorBar;
+        }
     </script>
 </body>
 </html>
