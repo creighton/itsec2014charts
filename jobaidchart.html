@@ -95,7 +95,7 @@
         </div>
     </div>
     <script type="text/javascript">
-        var dash;
+        var dash, live;
         window.onload = function () {
             ADL.launch(function(err, launchdata, xAPIWrapper) {
                 if (!err) {
@@ -113,13 +113,16 @@
                 dash = new ADL.XAPIDashboard();
                 $('input:radio[id="canned"]').on('change', function () {
                     console.log("canned");
-                    drawCharts(false);
+                    live = false;
+                    drawCharts(live);
                 })
                 $('input:radio[id="live"]').on('change', function () {
                     console.log("live");
-                    drawCharts(true);
+                    live = true;
+                    drawCharts(live);
                 })
-                drawCharts(false);
+                live = false;
+                drawCharts(live);
             }, true);
         };
 
@@ -128,8 +131,8 @@
             dash.data.contents = [];
             if (live) {
                 // only get statements with "id": "http://adlnet.gov/jobaid/roses"
-                // and ADL.verbs.experienced
-                dash.fetchAllStatements({'activity':'http://adlnet.gov/jobaid/roses','verb':ADL.verbs.experienced.id,'related_activities':'true'},
+                // and ADL.verbs.completed
+                dash.fetchAllStatements({'activity':'http://adlnet.gov/jobaid/roses','verb':ADL.verbs.completed.id,'related_activities':'true'},
                                        function() {graphActivityActivity(); graphActorActivityFrequency();});
             }
             else {
@@ -158,17 +161,25 @@
         function graphActorActivityFrequency() {
             var actorActivityBar = dash.createBarChart({
                 container: '#actors',
-                groupBy: 'actor.mbox',
-                aggregate: ADL.count(),
+                process: function (data, event, opts) {
+                    var d = new ADL.Collection(data).groupBy('actor.account.homePage').groupBy('actor.account.name').contents;
+                    var combined = [];
+                    for (gr in d) {
+                        for (i in d[gr].data){
+                            d[gr].data[i].bigGroup = d[gr].group;
+                        }
+                        combined.push(d[gr].data)
+                    }
+                    var combined = [].concat.apply([], combined)
+                    opts.cb( combined.map(function(node) {
+                        node['user'] = node.group + "(" + node.bigGroup + ")"
+                        return {in: node.user, out: node.data.length};
+                    }) );
+                },                
                 customize: function (chart, event) {
                     chart.xAxis.rotateLabels(45);
                     chart.xAxis.tickFormat(function(d){
-                        var coll = new ADL.Collection(dash.data.contents.slice(0));
-                        var contents = coll.where('actor.mbox = "'+ d +'"').contents;
-                        if (contents.length > 0){
-                            return contents[0].actor.name;
-                        }
-                        return "all";
+                        return d;
                     });
                 },
                 child: graphActivityPie()
@@ -182,7 +193,8 @@
                 container: "#activitypie",
                 groupBy: "object.id",
                 pre: function (data, event) {
-                    return data.where('actor.mbox = "' + event.in + '"');
+                    split = event.in.split("(");
+                    return data.where('actor.account.name = "' + split[0] + '" and actor.account.homePage = "'+ split[1].slice(0,-1) + '"');
                 },
                 aggregate: ADL.count(),
                 customize: function(c) { 
@@ -196,22 +208,30 @@
         function graphActorBar() {
             var actorBar = dash.createBarChart({
                 container: "#actorbar",
-                groupBy: "actor.mbox",
-                pre: function (data, event) {
-                    return data.where('object.id = "' + event.in + '"');
-                },
-                aggregate: ADL.count(),
+                process: function (data, event, opts) {
+                    var d = new ADL.Collection(data).where('object.id = "' + event.in + '"').groupBy('actor.account.homePage').groupBy('actor.account.name').contents;
+                    var combined = [];
+                    for (gr in d) {
+                        for (i in d[gr].data){
+                            d[gr].data[i].bigGroup = d[gr].group;
+                        }
+                        combined.push(d[gr].data)
+                    }
+                    var combined = [].concat.apply([], combined)
+                    opts.cb( combined.map(function(node) {
+                        node['user'] = node.group + "(" + node.bigGroup + ")"
+                        return {in: node.user, out: node.data.length};
+                    }) );
+                },                
                 customize: function(c) { 
                     c.xAxis.rotateLabels(45);
                     c.xAxis.tickFormat(function(d){
-                        var coll = new ADL.Collection(dash.data.contents.slice(0));
-                        var contents = coll.where('actor.mbox = "'+ d +'"').contents;
-                        return contents[0].actor.name;
+                        return d;
                     });
                 }
             });
             return actorBar;
-        }
+        }      
     </script>
 </body>
 </html>
