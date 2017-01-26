@@ -113,7 +113,7 @@
         </div>
     </div>
     <script type="text/javascript">
-        var stmtdash, attdash;   
+        var stmtdash, attdash, live;   
         window.onload = function () {
             ADL.launch(function(err, launchdata, xAPIWrapper) {
                 if (!err) {
@@ -132,13 +132,16 @@
                 attdash = new ADL.XAPIDashboard();
                 $('input:radio[id="canned"]').on('change', function () {
                     console.log("canned");
-                    drawCharts(false);
+                    live = false;
+                    drawCharts(live);
                 })
                 $('input:radio[id="live"]').on('change', function () {
                     console.log("live");
-                    drawCharts(true);
+                    live = true;
+                    drawCharts(live);
                 })
-                drawCharts(false);
+                live = false;
+                drawCharts(live);
             }, true);
         };
 
@@ -151,8 +154,9 @@
             if (live) {
                 window.Jobaid = getLiveJobAidData();
                 // only get statements with "id": "http://adlnet.gov/jobaid/roses"
-                // and ADL.verbs.experienced
-                stmtdash.fetchAllStatements({'activity':'http://adlnet.gov/courses/roses','related_activities':'true'},
+                // and ADL.verbs.completed
+                var query = {'activity':'http://adlnet.gov/courses/roses','related_activities':'true'}
+                stmtdash.fetchAllStatements(query,
                     function() {
                         window.Course = {
                             statements: stmtdash.data.contents.slice(0),
@@ -162,7 +166,7 @@
                         graphActivityAttempts();
                         graphScores();
                         // show no data available
-                        graphUserChart('n');
+                        graphUserChart('n', 'n');
                     }
                );
 
@@ -179,7 +183,7 @@
                 graphActivityAttempts();
                 graphScores();
                 // show no data available
-                graphUserChart('n');
+                graphUserChart('n', 'n');
             }
 
         }
@@ -188,7 +192,7 @@
             var stmts = [];
             var res = ADL.XAPIWrapper.getStatements({activity:'http://adlnet.gov/jobaid/roses',
                                                    related_activities:'true',
-                                                   verb: ADL.verbs.experienced.id});
+                                                   verb: ADL.verbs.completed.id});
 
             stmts = stmts.concat(res.statements);
             while (res.more && res.more !== "") {
@@ -226,7 +230,7 @@
             var ret = {profiles:{}};
             for (idx in actors) {
                 var actobj = JSON.parse(actors[idx]);
-                var actkey = actobj.account.name;
+                var actkey = actobj.account.name+"("+actobj.account.homePage+")";
                 ret.profiles[actkey] = {};
                 for (act in actset) {
                     ret.profiles[actkey][actset[act]] = {attempts:[]};
@@ -248,7 +252,7 @@
          *****/
 
         function graphUserDetails() {
-            var data = convertCollToData(new ADL.Collection(Course.statements).where('verb.id !="'+ADL.verbs.responded.id+'"').groupBy('actor.account.name'));
+            var data = convertCollToData(new ADL.Collection(Course.statements).where('verb.id !="'+ADL.verbs.responded.id+'"').groupBy('actor.account.homePage').groupBy('actor.account.name'));
             nv.addGraph(function() {
                 var chart = nv.models.indentedTree()
                     .tableClass('table table-striped') //for bootstrap styling
@@ -284,15 +288,14 @@
             });
         }
 
-        function graphUserChart(mbox) {
+        function graphUserChart(name, hp) {
             // maybe a new dashboard here
             // what about course activity attempts + job aid attempts
             var coll = new ADL.Collection(Course.statements),
-                contents = coll.where('actor.account.name = "'+ mbox +'"').contents;
+                contents = coll.where('actor.account.name = "'+ name +'" and actor.account.homePage = "'+ hp +'" and verb.id = "' + ADL.verbs.completed.id + '"').contents;
 
             if (contents.length > 0) {
-                actorname = contents[0].actor.name;
-                contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(Jobaid).where('actor.mbox = "mailto:'+ mbox +'"').contents)));
+                contents = getCourseToJobaidAttempts(orderByTimestamp(contents.concat(new ADL.Collection(window.Jobaid).where('actor.account.name = "'+ name +'" and actor.account.homePage = "'+ hp +'"').contents)));
             }
 
             nv.addGraph(function() {
@@ -358,18 +361,25 @@
                     d3.select('#actorbar h4').text("'" + /[^\/]+$/.exec(event.in)[0] + "' Attempts by Actor");
                     var d = mapProfileData(Course.activityprofiles.profiles);
                     d = new ADL.Collection(d).where('actid = "' + event.in + '"').contents;
-                    opts.cb( d.map(function(node) { return {in: node.user, out: node.attempts.length};}) );
+                    opts.cb( d.map(function(node) { 
+                        return {in: node.user, out: node.attempts.length};
+                    }) );
                 },
                 aggregate: ADL.count(),
                 customize: function(c) {
                     c.xAxis.rotateLabels(45);
                     c.xAxis.tickFormat(function(d,e,f){
                         var coll = new ADL.Collection(Course.statements);
-                        var contents = coll.where('actor.account.name = "'+ d +'"').contents;
+                        if (live){
+                            var contents = coll.where('actor.account.name = "'+ d[0] +'" and actor.account.homePage = "'+ d[1] +'"').contents;
+                        }
+                        else {
+                            var contents = coll.where('actor.account.name = "'+ d +'"').contents;
+                        }
                         if (contents[0].actor.name !== undefined)
                             return contents[0].actor.name;
                         else if (contents[0].actor.account !== undefined)
-                            return contents[0].actor.account.name.split('@')[0];
+                            return contents[0].actor.account.name + "(" + contents[0].actor.account.homePage + ")";
                         return d;
                     });
                 }
@@ -457,12 +467,18 @@
         function mapProfileData( data ) {
             var ret = [];
             for (var key in data) {
-
                 if (data.hasOwnProperty(key)) {
-                    for (var actkey in data[key]) {
+                    for (var actkey in data[key]) {                        
                         if (data[key].hasOwnProperty(actkey)) {
                             var ob = {};
-                            ob.user = key;
+                            if (live){
+                                split = key.split("(");
+                                ob.user = []
+                                ob.user.push(split[0], split[1].slice(0,-1))
+                            }
+                            else{
+                                ob.user = key;
+                            }
                             ob.actid = actkey;
                             ob.attempts = data[key][actkey]["attempts"];
                             ret.push(ob);
@@ -528,48 +544,53 @@
         */
         function convertCollToData(coll) {
             var data = [];
-            data = coll.contents.map(function(node) {
-                // node = {data: [statements for actor], group: actor mbox}
-                return {
-                    // learner level
-                    "key": node.data[0].actor.name || node.group,
-                    "score": getLearnerFinalScore(node),
-                    "attempts": new ADL.Collection(node.data)
-                            .where('object.id = "http://adlnet.gov/courses/roses/posttest"' +
-                                   ' and verb.id = "' + ADL.verbs.terminated.id + '"')
-                            .contents.length,
-                    "actor": node.group,
-                    "url": "javascript: graphUserChart('"+node.group+"')",
-                    "_values" : new ADL.Collection(node.data).groupBy('object.id')
-                        .contents.map(function(node){
-                        // node = {data: [statements for activity], group: activity id}
-                        return {
-                            // activity level
-                            "key": /[^\/]+$/.exec(node.group)[0],
-                            "score": getActivityTestScoreAverage(node),
-                            "attempts": getActivityScoredOrCompletedArray(node).length,
-                            "activityid":node.group,
-                            "_values": getActivityScoredOrCompletedArray(node).map(function(node){
-                                // node = {statement}
-                                return {
-                                    // attempt level
-                                    "key": node.context.contextActivities.grouping[0].id,
-                                    "score": getAttemptScore(node),
-                                    "attempts": new Date(node.timestamp).toLocaleString(),
-                                    "_values": getInteractionsArray(node).map(function(node){
-                                        return {
-                                            "key":(node.object.definition && node.object.definition.description)?node.object.definition.description['en-US'] || node.object.id : node.object.id,
-                                            "score":node.result.response,
-                                            "attempts": new Date(node.timestamp).toLocaleString()
-                                        };
-                                    })
-                                };
-                            })
-                        };
-                    })
-                };
-            });
-            return [{"key":"Roses Course", "values": data}];
+            var bigData = [];
+            for (i = 0; i < coll.contents.length; i++){
+                data = coll.contents[i].data.map(function(node) {
+                    // node = {data: [statements for actor], group: actor mbox}
+                    return {
+                        // learner level
+                        "key": node.group + "("+coll.contents[i].group+")",
+                        "score": getLearnerFinalScore(node),
+                        "attempts": new ADL.Collection(node.data)
+                                .where('object.id = "http://adlnet.gov/courses/roses/posttest"' +
+                                       ' and verb.id = "' + ADL.verbs.terminated.id + '"')
+                                .contents.length,
+                        "actor": node.group,
+                        "url": "javascript: graphUserChart('"+node.group+"','"+coll.contents[i].group+"')",
+                        "_values" : new ADL.Collection(node.data).groupBy('object.id')
+                            .contents.map(function(node){
+                            // node = {data: [statements for activity], group: activity id}
+                            return {
+                                // activity level
+                                "key": /[^\/]+$/.exec(node.group)[0],
+                                "score": getActivityTestScoreAverage(node),
+                                "attempts": getActivityScoredOrCompletedArray(node).length,
+                                "activityid":node.group,
+                                "_values": getActivityScoredOrCompletedArray(node).map(function(node){
+                                    // node = {statement}
+                                    return {
+                                        // attempt level
+                                        "key": node.context.contextActivities.grouping[0].id,
+                                        "score": getAttemptScore(node),
+                                        "attempts": new Date(node.timestamp).toLocaleString(),
+                                        "_values": getInteractionsArray(node).map(function(node){
+                                            return {
+                                                "key":(node.object.definition && node.object.definition.description)?node.object.definition.description['en-US'] || node.object.id : node.object.id,
+                                                "score":node.result.response,
+                                                "attempts": new Date(node.timestamp).toLocaleString()
+                                            };
+                                        })
+                                    };
+                                })
+                            };
+                        })
+                    };
+                });
+                bigData.push(data)
+            }
+
+            return [{"key":"Roses Course", "values": [].concat.apply([], bigData)}];
         }
 
         function getInteractionsArray(node) {
